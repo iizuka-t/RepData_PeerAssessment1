@@ -5,21 +5,55 @@ output:
     keep_md: true
 ---
 
-
 ## Loading and preprocessing the data
 
+```{r}
+d <- read.csv("activity/activity.csv") # loading the data
 
+totalStepPerDay <- aggregate(steps ~ date, data=d, FUN=sum) # sums up steps each date
+names(totalStepPerDay) <-c("date","totalStep")
+```
 
 ## What is mean total number of steps taken per day?
+
+Displayed below is a histogram of the total number of steps taken each day.
+
+```{r histogram,echo=FALSE}
+hist(totalStepPerDay$totalStep)
+```
+
+The mean and median total number of steps taken per day were calculated using the following R codes.
+
+```{r mean_and_median,echo=TRUE}
+mean_and_median_total_numberOfSteps <- aggregate(steps ~ date, data=d, FUN=function(x){c(mean=mean(x), median=median(x))})
+mean_and_median_total_numberOfSteps
+```
 
 
 
 ## What is the average daily activity pattern?
 
 
+A time series plot of the 5-minute interval (x-axis) and the
+average number of steps taken, averaged across all days (y-axis) will be shown. The average number of steps was calculated using the following codes:
 
-## Imputing missing values
+```{r}
+dailyPattern <- aggregate(steps ~ interval, data=d, FUN=mean)
+```
 
+Here is a time-series plot.
+
+```{r myplot, echo=FALSE}
+library(ggplot2)
+qplot(interval, steps, data=dailyPattern, geom="line")
+```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Yes. Activity patterns differ between weekdays and weekends.
+
+```{r activity_patterns_differ, echo=FALSE}
+library(ggplot2)
+qplot(interval, mean, data=dailyPattern3,facets= .~ weekend, geom="line")
+```
