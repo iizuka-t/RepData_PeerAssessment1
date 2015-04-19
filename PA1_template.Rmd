@@ -49,11 +49,74 @@ qplot(interval, steps, data=dailyPattern, geom="line")
 ```
 
 
+## Imputting
+
+Missing values will be imputted with an appropriate value.
+
+To begin with, the total number of missing values in the dataset was counted.
+
+```{r imbutting_count_NA, echo=TRUE}
+isNa <- is.na(d$steps)       
+print(unique(d$date[isNa]))  # which date has NA in its steps variable.
+print(sum(isNa))             # counts how many NAs.
+```
+
+The following codes were used for imputting.
+NA will be imputted with daily pattern whichever appropriate by date, weekend daily pattern or weekday daily pattern.
+
+```{r imputing, echo=TRUE}
+require(plyr)
+require(dplyr)
+
+Sys.setlocale("LC_TIME","C") # turns off locale unfriendly to English.
+
+d %>% mutate (date=as.Date(date,"%Y-%m-%d")) %>% mutate(weekdays=weekdays(date)) %>%
+  mutate(isWeekend=!is.na(match(weekdays, c("Sunday","Saturday")))) ->w
+
+factor(w$isWeekend, levels=c(FALSE,TRUE),labels=c("weekday","weekend"))->w$weekend
+
+dailyPattern2 <- ddply(w, c("interval","weekend"), function(x){c(mean=mean(x$steps,na.rm=T), median=median(x$steps,na.rm=T))})
+
+
+# daily pattern for weekend and weekday, respectively
+dailyPattern2 %>% filter(weekend == "weekend") -> weekendDailyPattern
+dailyPattern2 %>% filter(weekend == "weekday") -> weekdayDailyPattern
+
+# NA will be imputted with daily pattern whichever appropriate by date, weekend daily pattern or weekday daily pattern.
+w$steps[isNa] <- ifelse(  w$isWeekend[isNa],  
+      weekendDailyPattern$mean[match(w$interval[isNa],weekendDailyPattern$interval)], 
+      weekdayDailyPattern$mean[match(w$interval[isNa],weekdayDailyPattern$interval)])
+```
+
+
+The benefit of this imputing will be checked.
+
+A histogram of the total number of steps taken each day for the imputted data set is shown:
+```{r histogram after imput, echo=TRUE}
+totalStepPerDay2 <- aggregate(steps ~ date, data=w, FUN=sum) # sums up steps each date
+names(totalStepPerDay2) <-c("date","totalStep")
+hist(totalStepPerDay2$totalStep)
+```
+In comarison to the histogram shown in the 1st part of this report, the frequency of the interval [10000, 15000] has increased.
+
+The mean and median total number of steps taken per day will be shown next.
+
+```{r mean_and_median2,echo=TRUE}
+mean_and_median_total_numberOfSteps2 <- aggregate(steps ~ date, data=w, FUN=function(x){c(mean=mean(x), median=median(x))})
+mean_and_median_total_numberOfSteps2
+```
+
+In comparison to the 1st part of this report, the changes in mean look nil while the changes in median for several dates look rather significant. To note, median for the majority of the dates stay zero just as the 1st part of the report has shown.  
+
 ## Are there differences in activity patterns between weekdays and weekends?
 
 Yes. Activity patterns differ between weekdays and weekends.
 
-```{r activity_patterns_differ, echo=FALSE}
+```{r activity_patterns_differ_code, echo=TRUE}
+dailyPattern3 <- ddply(w, c("interval","weekend"), function(x){c(mean=mean(x$steps,na.rm=T), median=median(x$steps,na.rm=T))})
+```
+
+```{r activity_patterns_differ, echo=TRUE}
 library(ggplot2)
 qplot(interval, mean, data=dailyPattern3,facets= .~ weekend, geom="line")
 ```
